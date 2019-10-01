@@ -44,7 +44,7 @@ const getWidth = () => {
 }
 
 const dbref= firebase.firestore().collection('Events');
-const storage = firebase.storage();
+const storage = firebase.storage().ref();
 
 
 /* eslint-disable react/no-multi-comp */
@@ -138,6 +138,7 @@ class DesktopContainer extends Component {
                 <Menu.Item as={Link} to='/'>Home</Menu.Item>
                 <Menu.Item as='a' active>Create an Event</Menu.Item>
                 <Menu.Item as='a'>Venues</Menu.Item>
+                <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
               </Container>
             </Menu>
             <HomepageHeading />
@@ -184,6 +185,7 @@ class MobileContainer extends Component {
           <Menu.Item as={Link} to='/'>Home</Menu.Item>
           <Menu.Item as='a' active>Create an Event</Menu.Item>
           <Menu.Item as='a'>Venues</Menu.Item>
+          <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
           <Menu.Item as='a' onClick={this.handleSidebarHide}><Icon name='close'/></Menu.Item>
         </Sidebar>
 
@@ -257,8 +259,6 @@ ResponsiveContainer.propTypes = {
 export function CreateEvent() {
   const [values, setValues] = React.useState({
     eventTitle: '',
-    eventCategory: '',
-    eventType: '',
     eventOrganizer: '',
     eventEmail: '',
     eventPhone: '',
@@ -267,9 +267,21 @@ export function CreateEvent() {
     eventStreet2: '',
     eventCity: '',
     eventProvince: '',
-    eventCountry: '',
     eventDetails: '',
     });
+  const [eventCategory, setCategory] = React.useState();
+  const [eventType, setType] = React.useState();
+  const [eventCountry, setCountry] = React.useState();
+
+  const handleCategory = (e, {value}) => {
+    setCategory(value);
+  }
+  const handleType = (e, {value}) => {
+    setType(value);
+  }
+  const handleCountry = (e, {value}) => {
+    setCountry(value);
+  }
 
   const [eventImage, setImage] = React.useState();
   const [prevUrl, setPrevUrl] = React.useState();
@@ -315,50 +327,53 @@ export function CreateEvent() {
 
   const onSubmit = (e) => {
 			e.preventDefault();
-			if(eventImage) {
-				const uploadImage = storage.ref(`EventImages/${values.eventTitle}`).put(eventImage);
-				uploadImage.on('state_changed',
-				    (snapshot) => {
-				            // progrss function ....
-				            const prog = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-				            setLoading(true);
-				          },
-				    (error) => {
-				        console.log(error);
-				    },
-				    () => {
-				        storage.ref('EventImages').child(values.eventName).getDownloadURL().then((url) =>{
-				            dbref.add({
-				                eventName: values.eventTitle,
-				                eventCategory: values.eventCategory,
-                        eventType: values.eventType,
+      if(eventImage) {
+        const uploadImage = storage.child(`EventImages/${values.eventTitle}`).put(eventImage);
+        uploadImage.on('state_changed',
+            (snapshot) => {
+                    // progrss function ....
+                    const prog = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    setLoading(true);
+                  },
+            (error) => {
+                console.log(error);
+            },
+            () => {
+                                    console.log(eventCategory);
+                uploadImage.snapshot.ref.getDownloadURL().then((url) =>{
+                    dbref.add({
+                        eventName: values.eventTitle,
+                        eventCategory: eventCategory,
+                        eventType: eventType,
                         eventOrganizer: values.eventOrganizer,
-				                eventVenue: values.eventVenue,
-				                eventAddress: values.eventAddress,
-				                eventPhone: values.eventPhone,
-				                eventEmail: values.eventEmail,
-				                eventDetails: values.eventDetails,
-				                startDate: startDate,
-				                startTime: startTime,
+                        eventVenue: values.eventVenue,
+                        eventStreet1: values.eventStreet1,
+                        eventStreet2: values.eventStreet2,
+                        eventCountry: eventCountry,
+                        eventPhone: values.eventPhone,
+                        eventEmail: values.eventEmail,
+                        eventDetails: values.eventDetails,
+                        startDate: startDate,
+                        startTime: startTime,
                         endDate: endDate,
                         endTime: endTime,
-				                eventImgUrl: url,
+                        eventImgUrl: url,
                         public: state.public,
                         tickets: state.ticket
-				            }).then((docRef) => {
-				                console.log("Document written with ID: ", docRef.id);
-				                setValues('');
-				                setImage('');
-				                setPrevUrl("");
+                    }).then((docRef) => {
+                        console.log("Document written with ID: ", docRef.id);
+                        setValues('');
+                        setImage('');
+                        setPrevUrl("");
                         setLoading(false);
-				            }).catch((error) => {
-				                console.error("Error adding document: ", error);
-				            });
-				        })
+                    }).catch((error) => {
+                        console.error("Error adding document: ", error);
+                    });
+                })
 
-				    }
-				);
-			}
+            }
+        );
+      }
 			else {
         NotificationManager.error('Please an image is required', 'Close', 3000);
 			}
@@ -402,9 +417,9 @@ export function CreateEvent() {
   });
   return (
     <ResponsiveContainer>
+      <NotificationContainer/>
       <Container style={{ padding: '5em 0em' }} text>
         <Form size='large' key='large' loading={loading} onSubmit={onSubmit}>
-          <NotificationContainer/>
           <Header size='huge'>
             <Icon name='text cursor' color='grey'/>
             <Header.Content>Basic Information</Header.Content>
@@ -415,8 +430,8 @@ export function CreateEvent() {
             <input placeholder='Title' value={values.eventTitle} name='eventTitle' onChange={handleChange('eventTitle')}/>
           </Form.Field>
           <Form.Group>
-            <Form.Select label='Event Category' placeholder='Category' required value={values.eventCategory} name='eventCategory' onChange={handleChange('eventCategory')} options={category}/>
-            <Form.Select label='Event Type' placeholder='Type' required value={values.eventType} name='eventType' onChange={handleChange('eventType')} options={type}/>
+            <Form.Dropdown selection label='Event Category' placeholder='Category' required value={eventCategory} name='eventCategory' onChange={handleCountry} options={category}/>
+            <Form.Dropdown selection multiple label='Event Type' placeholder='Type' required value={eventType} name='eventType' onChange={handleType} options={type}/>
           </Form.Group>
           <Form.Field required width={10}>
             <label>Event Organizer</label>
@@ -440,7 +455,7 @@ export function CreateEvent() {
             <Form.Input label='City' placeholder='City' required value={values.eventCity} name='eventCity' onChange={handleChange('eventCity')}/>
             <Form.Input label='State/Province' placeholder='State/Province' required value={values.eventProvince} name='eventProvince' onChange={handleChange('eventProvince')}/>
           </Form.Group>
-          <Form.Select label='Country' placeholder='Country' required width={6} value={values.eventCountry} name='eventCountry' onChange={handleChange('eventCountry')} options={country}/>
+          <Form.Select label='Country' placeholder='Country' required width={6} value={eventCountry} name='eventCountry' onChange={handleCountry} options={country}/>
           <Divider/>
           <Header size='huge'>
             <Icon name='calendar alternate outline' color='grey'/>
