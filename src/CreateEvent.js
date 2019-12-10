@@ -25,12 +25,11 @@ import {
   Dropdown,
   Checkbox,
   Popup,
+  Message,
 } from 'semantic-ui-react';
 import {
   DateInput,
   TimeInput,
-  DateTimeInput,
-  DatesRangeInput
 } from 'semantic-ui-calendar-react';
 import firebase from './components/Firebase';
 
@@ -272,6 +271,7 @@ export function CreateEvent() {
   const [eventCategory, setCategory] = React.useState();
   const [eventType, setType] = React.useState();
   const [eventCountry, setCountry] = React.useState();
+  const [phoneCode, setCode] = React.useState('+237');
 
   const handleCategory = (e, {value}) => {
     setCategory(value);
@@ -283,12 +283,22 @@ export function CreateEvent() {
     setCountry(value);
   }
 
+  const handleCode = (e, {value}) => {
+    setCode(value);
+  }
+
   const [eventImage, setImage] = React.useState();
   const [prevUrl, setPrevUrl] = React.useState();
-  const [state, setSwitch] = React.useState({
-    public: false,
-    ticket: false,
-  });
+  const [eventPublic, setPublic] = React.useState(false);
+  const [eventTickets, setTickets] = React.useState(false);
+
+  const handlePublic = (e) => {
+    setPublic(!eventPublic);
+  }
+
+  const handleTickets = (e) => {
+    setTickets(!eventTickets);
+  }
 
   const fileInputRef = React.createRef();
 
@@ -297,10 +307,6 @@ export function CreateEvent() {
   const [startTime, setStartTime] = React.useState('');
   const [endTime, setEndTime] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-
-  const handleSwitch = name => event => {
-    setSwitch({ ...state, [name]: event.target.checked });
-  };
 
   const handleStartDateChange = (event, {name, value}) => {
       setStartDate(value);
@@ -349,8 +355,10 @@ export function CreateEvent() {
                         eventVenue: values.eventVenue,
                         eventStreet1: values.eventStreet1,
                         eventStreet2: values.eventStreet2,
+                        eventProvince: values.eventProvince,
+                        eventCity: values.eventCity,
                         eventCountry: eventCountry,
-                        eventPhone: values.eventPhone,
+                        eventPhone: `${phoneCode}${values.eventPhone}`,
                         eventEmail: values.eventEmail,
                         eventDetails: values.eventDetails,
                         startDate: startDate,
@@ -358,13 +366,38 @@ export function CreateEvent() {
                         endDate: endDate,
                         endTime: endTime,
                         eventImgUrl: url,
-                        public: state.public,
-                        tickets: state.ticket
+                        public: eventPublic,
+                        tickets: eventTickets
                     }).then((docRef) => {
                         console.log("Document written with ID: ", docRef.id);
-                        setValues('');
-                        setImage('');
+                        dbref.doc(docRef.id).update({
+                          'uid': docRef.id
+                        })
+                        setValues(
+                          {
+                            eventTitle: '',
+                            eventOrganizer: '',
+                            eventEmail: '',
+                            eventPhone: '',
+                            eventVenue: '',
+                            eventStreet1: '',
+                            eventStreet2: '',
+                            eventCity: '',
+                            eventProvince: '',
+                            eventDetails: '',
+                          }
+                        );
+                        setStartDate('');
+                        setEndDate('');
+                        setStartTime('');
+                        setEndTime('');
+                        setCategory('');
+                        setType('');
+                        setCountry('');
+                        setImage("");
                         setPrevUrl("");
+                        setPublic(false);
+                        setTickets(false);
                         setLoading(false);
                     }).catch((error) => {
                         console.error("Error adding document: ", error);
@@ -375,7 +408,6 @@ export function CreateEvent() {
         );
       }
 			else {
-        NotificationManager.error('Please an image is required', 'Close', 3000);
 			}
 	}
 
@@ -398,18 +430,7 @@ export function CreateEvent() {
     {key: 'Cameroon', text: 'Cameroon', value: 'Cameroon'},
   ]
 
-  const email = [
-  { key: '@yahoo.com', text: '@yahoo.com', value: '@yahoo.com' },
-  { key: '@hotmail.com', text: '@hotmail.com', value: '@hotmail.com' },
-  { key: '@aol.com', text: '@aol.com', value: '@aol.com' },
-  { key: '@gmail.com', text: '@gmail.com', value: '@gmail.com' },
-  { key: '@msn.com', text: '@msn.com', value: '@msn.com' },
-  { key: '@hotmail.co.uk', text: '@hotmail.co.uk', value: '@hotmail.co.uk' },
-  { key: '@yahoo.co.uk', text: '@yahoo.co.uk', value: '@yahoo.co.uk' },
-  { key: '@icloud.com', text: '@icloud.com', value: '@icloud.com' },
-]
-
- const phoneCode = [
+ const phoneExt = [
    {key: '+237', text: '+237', value: '+237'}
  ]
 
@@ -417,7 +438,6 @@ export function CreateEvent() {
   });
   return (
     <ResponsiveContainer>
-      <NotificationContainer/>
       <Container style={{ padding: '5em 0em' }} text>
         <Form size='large' key='large' loading={loading} onSubmit={onSubmit}>
           <Header size='huge'>
@@ -427,25 +447,25 @@ export function CreateEvent() {
           </Header>
           <Form.Field required>
             <label>Event Title</label>
-            <input placeholder='Title' value={values.eventTitle} name='eventTitle' onChange={handleChange('eventTitle')}/>
+            <input placeholder='Title' value={values.eventTitle} name='eventTitle' onChange={handleChange('eventTitle')} required/>
           </Form.Field>
           <Form.Group>
-            <Form.Dropdown selection label='Event Category' placeholder='Category' required value={eventCategory} name='eventCategory' onChange={handleCountry} options={category}/>
+            <Form.Dropdown selection label='Event Category' placeholder='Category' required value={eventCategory} name='eventCategory' onChange={handleCategory} options={category}/>
             <Form.Dropdown selection multiple label='Event Type' placeholder='Type' required value={eventType} name='eventType' onChange={handleType} options={type}/>
           </Form.Group>
           <Form.Field required width={10}>
             <label>Event Organizer</label>
-            <input placeholder='Organizer' value={values.eventOrganizer} name='eventOrganizer' onChange={handleChange('eventOrganizer')}/>
+            <input placeholder='Organizer' value={values.eventOrganizer} name='eventOrganizer' onChange={handleChange('eventOrganizer')} required/>
           </Form.Field>
           <Divider/>
           <Header size='huge'>
-            <Icon name='map' color='grey'/>
+            <Icon name='map marker alternate' color='grey'/>
             <Header.Content>Location Information</Header.Content>
             <Header.Subheader>Make your event's location know to the attendees &amp; the surrounding community</Header.Subheader>
           </Header>
           <Form.Field required width={10}>
             <label>Event Venue</label>
-            <input placeholder="Venue" value={values.eventVenue} name='eventVenue' onChange={handleChange('eventVenue')}/>
+            <input placeholder="Venue" value={values.eventVenue} name='eventVenue' onChange={handleChange('eventVenue')} required/>
           </Form.Field>
           <Form.Group>
             <Form.Input label='Street Address 1' placeholder='Address 1' required value={values.eventStreet1} name='eventStreet1' onChange={handleChange('eventStreet1')}/>
@@ -528,7 +548,7 @@ export function CreateEvent() {
           <Form.TextArea label='Event Description' placeholder='Description' style={{ minHeight: 250 }} required value={values.eventDetails} name='eventDetails' onChange={handleChange('eventDetails')}/>
           <Form.Field required>
             <label>Choose the Main Image for your event</label>
-            <Button secondary content='Select image' icon='camera' labelPosition='left' onClick={() => fileInputRef.current.click()}/>
+            <Button secondary type='button' content='Select image' icon='camera' labelPosition='left' onClick={() => fileInputRef.current.click()}/>
             <input ref={fileInputRef} type='file' hidden onChange={handleImageChange}/>
           </Form.Field>
           <Image src={prevUrl} size='large' rounded/>
@@ -541,27 +561,26 @@ export function CreateEvent() {
           <Form.Group>
             <Form.Field width={7} required>
               <label>Organizer Email Address</label>
-              <Input label={<Dropdown defaultValue='@yahoo.com' options={email} />} labelPosition='right'
-                placeholder='Email' value={values.eventEmail} name='eventEmail' onChange={handleChange('eventEmail')}/>
+              <Input placeholder='Email' value={values.eventEmail} name='eventEmail' onChange={handleChange('eventEmail')} required/>
             </Form.Field>
             <Form.Field width={7} required>
               <label>Organizer Phone Number</label>
-              <Input label={<Dropdown defaultValue='+237' options={phoneCode}/>} labelPosition='left' value={values.eventPhone} name='eventPhone' onChange={handleChange('eventPhone')}/>
+              <Input label={<Dropdown defaultValue={phoneCode} options={phoneExt} value={phoneCode} onChange={handleCode}/>} labelPosition='left' value={values.eventPhone} name='eventPhone' onChange={handleChange('eventPhone')}/>
             </Form.Field>
           </Form.Group>
           <Divider/>
-          <Popup content='Event will be made public to all app users if turned on' trigger={<Button icon='info' size='mini'/>}/>
+          <Popup content='Event will be made public to all app users if turned on' trigger={<Button icon='question circle outline' type='button' size='mini'/>}/>
           <Form.Group inline>
             <Form.Field>
               <label>Public ?</label>
-              <Checkbox toggle checked={state.public} onChange={handleSwitch('public')}/>
+              <Checkbox toggle checked={eventPublic} onChange={handlePublic}/>
               <Popup/>
             </Form.Field>
           </Form.Group>
           <Form.Group inline>
             <Form.Field>
               <label>Tickets ?</label>
-              <Checkbox toggle checked={state.ticket} onChange={handleSwitch('ticket')}/>
+              <Checkbox toggle checked={eventTickets} onChange={handleTickets}/>
             </Form.Field>
           </Form.Group>
           <Form.Button primary content='Create Event' type='submit' floated='right'/>

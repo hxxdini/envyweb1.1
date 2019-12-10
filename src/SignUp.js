@@ -1,4 +1,5 @@
 import React from 'react';
+import { Redirect } from 'react-router-dom';
 import { Button, Form, Grid, Header, Image, Message, Segment } from 'semantic-ui-react';
 import {
   DateInput,
@@ -11,6 +12,7 @@ export function SignUp() {
 
   const [users, setUsers] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [redirect, setRedirect] = React.useState(false);
   const [dateOfBirth, setDateOfBirth] = React.useState('');
   const [values, setValues] = React.useState({
     firstName: '',
@@ -59,9 +61,10 @@ export function SignUp() {
           dateOfBirth: dateOfBirth,
           username: values.username,
           email: values.email,
+          biography: "",
           uid: userCredential.user.uid
         }).then((docRef) => {
-          // setRedirect(true);
+          setRedirect(true);
           setValues({
             firstName: '',
             lastName: '',
@@ -91,6 +94,7 @@ export function SignUp() {
 
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle'>
+      {redirect ? (<Redirect to='/dashboard'/>) : ""}
       <Grid.Column style={{ maxWidth: 600 }}>
         <Header as='h2' color='teal' textAlign='center'>
           <Image src='/logo.png' /> Create your account

@@ -1,9 +1,11 @@
 import React from 'react'
+import { Redirect } from 'react-router-dom';
 import { Button, Form, Grid, Header, Image, Message, Segment } from 'semantic-ui-react'
 import firebase from './components/Firebase';
 
  export function Login() {
    const [loading, setLoading] = React.useState(false);
+   const [redirect, setRedirect] = React.useState(false);
    const [values, setValues] = React.useState({
      'email': '',
      'password': ''
@@ -16,6 +18,7 @@ import firebase from './components/Firebase';
      setLoading(true);
      firebase.auth().signInWithEmailAndPassword(values.email, values.password).then((user) => {
        setLoading(false);
+       setRedirect(true);
        console.log('Login successful');
      }).catch(
        (error) => {
@@ -26,6 +29,7 @@ import firebase from './components/Firebase';
    }
    return (
      <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle'>
+       {redirect ? (<Redirect to='/dashboard'/>) : ""}
        <Grid.Column style={{ maxWidth: 450 }}>
          <Header as='h2' color='teal' textAlign='center'>
            <Image src='/logo.png' /> Login to your account

@@ -225,7 +225,7 @@ export function EditEvent(props) {
     e.preventDefault();
     setDetailLoader(true);
     if (eventImage) {
-      const uploadImage = storage.child(`EventImages/${values.eventTitle}`).put(eventImage);
+      const uploadImage = storage.child(`EventImages/${event.eventName}`).put(eventImage);
           uploadImage.on('state_changed',
           (snapshot) => {
                   setLoading(true);
@@ -234,7 +234,7 @@ export function EditEvent(props) {
               console.log(error);
             },
             () => {
-                console.log(eventCategory);
+                // console.log(eventCategory);
                 uploadImage.snapshot.ref.getDownloadURL().then((url) => {
                   docref.update({
                     'eventDetails': values.eventDetails ? values.eventDetails : event.eventDetails,

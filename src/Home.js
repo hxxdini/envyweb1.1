@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import _ from 'lodash'
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -12,12 +13,14 @@ import {
   Image,
   List,
   Menu,
+  Dropdown,
   Responsive,
   Segment,
   Sidebar,
   Visibility,
   Tab,
   Input,
+  Search,
   Label,
 } from 'semantic-ui-react'
 import firebase from './components/Firebase';
@@ -82,7 +85,7 @@ class DesktopContainer extends Component {
   showFixedMenu = () => this.setState({ fixed: true })
 
   render() {
-    const { children } = this.props
+    const { children, user } = this.props
     const { fixed } = this.state
 
     return (
@@ -122,14 +125,26 @@ class DesktopContainer extends Component {
                 </Menu.Item>
                 <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
                 <Menu.Item as='a'>Venues</Menu.Item>
-                {/* <Menu.Item as='a'>Careers</Menu.Item> */}
+                <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
                 <Menu.Item position='right'>
-                  <Button as='a' inverted={!fixed}>
+                  { user ?
+                    ([(<Dropdown item text="Profile" pointing>
+                      <Dropdown.Menu>
+                        <Dropdown.Item>Dashboard</Dropdown.Item>
+                      </Dropdown.Menu>
+                    </Dropdown>),
+                      (<Button as='a' inverted={!fixed} onClick={this.handleSignOut} secondary icon labelPosition='left'>
+                        <Icon name='power off'/>
+                        Logout
+                      </Button>)])
+                  :
+                  [(<Button as='a' inverted={!fixed}>
                     Log in
-                  </Button>
-                  <Button as='a' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
-                    Sign Up
-                  </Button>
+                  </Button>),
+                    (<Button as='a' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
+                      Sign Up
+                    </Button>)]
+                  }
                 </Menu.Item>
               </Container>
             </Menu>
@@ -145,6 +160,7 @@ class DesktopContainer extends Component {
 
 DesktopContainer.propTypes = {
   children: PropTypes.node,
+  user: PropTypes.any,
 }
 
 class MobileContainer extends Component {
@@ -155,7 +171,7 @@ class MobileContainer extends Component {
   handleToggle = () => this.setState({ sidebarOpened: true })
 
   render() {
-    const { children } = this.props
+    const { children, user } = this.props
     const { sidebarOpened } = this.state
 
     return (
@@ -179,9 +195,17 @@ class MobileContainer extends Component {
           </Menu.Item>
           <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
           <Menu.Item as='a'>Venues</Menu.Item>
-          {/* <Menu.Item as='a'>Careers</Menu.Item> */}
-          <Menu.Item as='a'>Log in</Menu.Item>
-          <Menu.Item as='a'>Sign Up</Menu.Item>
+          <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
+          {user ?
+            (
+              [(<Menu.Item as='a'>Dashboard</Menu.Item>),
+              (<Menu.Item as='a'>Notifications</Menu.Item>),
+              (<Menu.Item as='a' onClick={this.handleSignOut}>Logout</Menu.Item>)]
+            )
+          :
+          ([(<Menu.Item as='a'>Log in</Menu.Item>),
+            (<Menu.Item as='a'>Sign Up</Menu.Item>)])
+          }
           <Menu.Item as='a' onClick={this.handleSidebarHide}><Icon name='close'/></Menu.Item>
         </Sidebar>
 
@@ -215,12 +239,16 @@ class MobileContainer extends Component {
                     <Icon name='sidebar' />
                   </Menu.Item>
                   <Menu.Item position='right'>
-                    <Button as='a' inverted>
+                    {user ?
+                      ""
+                    :
+                    ([<Button as='a' inverted>
                       Log in
-                    </Button>
-                    <Button as='a' inverted style={{ marginLeft: '0.5em' }}>
-                      Sign Up
-                    </Button>
+                    </Button>],
+                      [<Button as='a' inverted style={{ marginLeft: '0.5em' }}>
+                        Sign Up
+                      </Button>])
+                    }
                   </Menu.Item>
                 </Menu>
               </Container>
@@ -237,14 +265,29 @@ class MobileContainer extends Component {
 
 MobileContainer.propTypes = {
   children: PropTypes.node,
+  user: PropTypes.any,
 }
 
-const ResponsiveContainer = ({ children }) => (
+const ResponsiveContainer = ({ children }) => {
+  const [user, setUser] = React.useState(firebase.auth().currentUser);
+  React.useEffect(() => {
+    firebase.auth().onAuthStateChanged(function(user){
+      if (user) {
+        console.log(user);
+        setUser(user);
+      }
+      else {
+        setUser(null);
+      }
+  })
+}, []);
+  return(
   <div>
-    <DesktopContainer>{children}</DesktopContainer>
-    <MobileContainer>{children}</MobileContainer>
+    <DesktopContainer user={user}>{children}</DesktopContainer>
+    <MobileContainer user={user}>{children}</MobileContainer>
   </div>
-)
+);
+}
 
 ResponsiveContainer.propTypes = {
   children: PropTypes.node,
@@ -253,22 +296,40 @@ ResponsiveContainer.propTypes = {
 const panes = [
   {
     menuItem: 'All Events',
-    render: () => <Tab.Pane attached={false}><Media/></Tab.Pane>,
+    render: () => <Segment padded raised><Media/></Segment>,
   },
   {
     menuItem: 'Party',
-    render: () => <Tab.Pane attached={false}><CategoryMedia loading category="Party"/></Tab.Pane>,
+    render: () => <Segment padded raised><CategoryMedia loading category="Party"/></Segment>,
   },
   {
     menuItem: 'Tab 3',
-    render: () => <Tab.Pane attached={false}>Tab 3 Content</Tab.Pane>,
+    render: () => <Segment padded raised>Tab 3 Content</Segment>,
   },
 ]
 
-export function Home() {
+export function Home(props) {
 
   const [events, setEvents] = React.useState([]);
   const [date, setDate] = React.useState(new Date());
+  const [searchLoader, setSearchLoader] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState('');
+  const [searchResults, setResults] = React.useState([]);
+  const handleResultSelect = (e, {result}) => {
+    setSearchValue(result.eventName);
+  }
+
+  const handleSearchChange = (e, {value}) => {
+    setSearchLoader(true);
+    setSearchValue(value);
+    setTimeout(() => {
+      if (searchValue.length < 1) return (setSearchLoader(false));
+      const re = new RegExp(_.escapeRegExp(searchValue), 'i');
+      const isMatch = (result) => re.test(result.eventName);
+      setSearchLoader(false);
+      setResults(_.filter(events, isMatch));
+    }, 300);
+  }
 
   React.useEffect(() => {
     db.collection("Events").get()
@@ -286,15 +347,28 @@ export function Home() {
 
   return (
   <ResponsiveContainer>
-    <Segment style={{ padding: '8em 0em' }} vertical>
+    <Segment style={{ padding: '8em 0em' }} raised vertical>
       <Menu secondary style={{ marginLeft: '10px' }}>
         <Menu.Menu position='left'>
           <Menu.Item>
-            <Input size='large' icon='map marker' iconPosition='left' placeholder='Search for events...' style={{ left: '10px' }}/>
+            {/* <Input size='large' icon='map marker' iconPosition='left' placeholder='Search for events...' style={{ left: '10px' }}/> */}
           </Menu.Item>
         </Menu.Menu>
       </Menu>
       <Grid container stackable columns='equal' verticalAlign='middle' centered>
+        <Grid.Column width={6}>
+          <Search
+            fluid
+            loading={searchLoader}
+            onResultSelect={handleResultSelect}
+            onSearchChange={_.debounce(handleSearchChange, 500, {
+              leading: true,
+            })}
+            results={searchResults}
+            value={searchValue}
+            {...props}
+          />
+        </Grid.Column>
         <Tab menu={{ secondary: true, pointing: true }} panes={panes} />
       </Grid>
     </Segment>
@@ -326,41 +400,36 @@ function Media(props){
   }, []);
 
   return(
-    // <Grid container stackable columns='equal' verticalAlign='middle' centered>
       <Card.Group centered items={events.count}>
         {events.map(event => (
-
-          // <Grid.Column>
-            <Card link>
-              <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
-              <Card.Content>
-                <Card.Header>{event.eventName}</Card.Header>
-                <Card.Meta>
-                  <span className='date'>{event.startDate}</span>
-                </Card.Meta>
-                <Card.Description>
-                  {event.eventDetails}
-                </Card.Description>
-              </Card.Content>
-              <Card.Content extra>
-                <Button as='div' labelPosition='right'>
-                  <Button icon toggle active={active} onClick={handleClick}>
-                    <Icon name='heart' />
-                    Like
-                  </Button>
-                  <Label as='a' basic pointing='left'>
-                    0
-                  </Label>
+          <Card link>
+            <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
+            <Card.Content>
+              <Card.Header>{event.eventName}</Card.Header>
+              <Card.Meta>
+                <span className='date'>{event.startDate}</span>
+              </Card.Meta>
+              <Card.Description>
+                {event.eventDetails}
+              </Card.Description>
+            </Card.Content>
+            <Card.Content extra>
+              <Button as='div' labelPosition='right'>
+                <Button icon toggle active={active} onClick={handleClick}>
+                  <Icon name='heart' />
+                  Like
                 </Button>
-                <a>
-                  <Icon name='share alternate'/>
-                </a>
-              </Card.Content>
-            </Card>
-          // </Grid.Column>
+                <Label as='a' basic pointing='left'>
+                  0
+                </Label>
+              </Button>
+              <a>
+                <Icon name='share alternate'/>
+              </a>
+            </Card.Content>
+          </Card>
         ))}
       </Card.Group>
-    // </Grid>
   );
 
 }
@@ -390,41 +459,37 @@ function CategoryMedia(props){
   }, []);
 
   return(
-    // <Grid container stackable columns='equal' verticalAlign='middle' centered>
 
       <Card.Group centered items={events.count}>
         {events.map(event => (
-
-          // <Grid.Column>
-            <Card link>
-              <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
-              <Card.Content>
-                <Card.Header>{event.eventName}</Card.Header>
-                <Card.Meta>
-                  <span className='date'>{event.startDate}</span>
-                </Card.Meta>
-                <Card.Description>
-                  {event.eventDetails}
-                </Card.Description>
-              </Card.Content>
-              <Card.Content extra>
-                <Button as='div' labelPosition='right'>
-                  <Button icon toggle active={active} onClick={handleClick}>
-                    <Icon name='heart' />
-                    Like
-                  </Button>
-                  <Label as='a' basic pointing='left'>
-                    0
-                  </Label>
+          <Card link>
+            <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
+            <Card.Content>
+              <Card.Header>{event.eventName}</Card.Header>
+              <Card.Meta>
+                <span className='date'>{event.startDate}</span>
+              </Card.Meta>
+              <Card.Description>
+                {event.eventDetails}
+              </Card.Description>
+            </Card.Content>
+            <Card.Content extra>
+              <Button as='div' labelPosition='right'>
+                <Button icon toggle active={active} onClick={handleClick}>
+                  <Icon name='heart' />
+                  Like
                 </Button>
-                <a>
-                  <Icon name='share alternate'/>
-                </a>
-              </Card.Content>
-            </Card>
+                <Label as='a' basic pointing='left'>
+                  0
+                </Label>
+              </Button>
+              <a>
+                <Icon name='share alternate'/>
+              </a>
+            </Card.Content>
+          </Card>
         ))}
       </Card.Group>
-    // </Grid>
   );
 
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Redirect } from 'react-router-dom';
 import { Button, Form, Grid, Header, Image, Message, Segment } from 'semantic-ui-react';
 import {
   DateInput,
@@ -9,6 +10,7 @@ const managersRef = firebase.firestore().collection("Managers");
 
 export function ManagerSignUp() {
   const [loading, setLoading] = React.useState(false);
+  const [redirect, setRedirect] = React.useState(false);
   const [values, setValues] = React.useState({
     venueName: '',
     email: '',
@@ -28,6 +30,7 @@ export function ManagerSignUp() {
           email: values.email,
           uid: userCredential.user.uid
         }).then((docRef) => {
+          setRedirect(true);
           setLoading(false);
           setValues({
             venueName: '',
@@ -46,6 +49,7 @@ export function ManagerSignUp() {
 
   return (
     <Grid textAlign='center' style={{ height: '100vh' }} verticalAlign='middle'>
+      {redirect ? (<Redirect to='/manager_dashboard'/>) : ""}
       <Grid.Column style={{ maxWidth: 500 }}>
         <Header as='h2' color='teal' textAlign='center'>
           <Image src='/logo.png' /> Register as a Manager
