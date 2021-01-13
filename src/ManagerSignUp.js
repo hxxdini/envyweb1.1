@@ -7,10 +7,14 @@ import {
 import firebase from './components/Firebase';
 
 const managersRef = firebase.firestore().collection("Managers");
+const db = firebase.firestore();
 
-export function ManagerSignUp() {
+export default function ManagerSignUp() {
   const [loading, setLoading] = React.useState(false);
   const [redirect, setRedirect] = React.useState(false);
+  const [date, setDate] = React.useState(new Date());
+  const [errorVisible, setErrorVisible] = React.useState(false);
+  const [error, setError] = React.useState('');
   const [values, setValues] = React.useState({
     venueName: '',
     email: '',
@@ -20,29 +24,55 @@ export function ManagerSignUp() {
     setValues({ ...values, [name]: event.target.value });
   };
 
+  const handleDismiss = () => {
+    setErrorVisible(false);
+  }
+
   const onSubmit = e => {
     e.preventDefault();
+    const statsRef = db.collection('Statistics').doc('Managers');
+    const batch = db.batch();
     setLoading(true);
     firebase.auth().createUserWithEmailAndPassword(values.email, values.password).then(
       function (userCredential) {
-        managersRef.doc(`${userCredential.user.uid}`).set({
+        const managerRef = db.collection('Managers').doc(userCredential.user.uid);
+        batch.set(managerRef, {
           venueName: values.venueName,
           email: values.email,
           uid: userCredential.user.uid
-        }).then((docRef) => {
-          setRedirect(true);
-          setLoading(false);
-          setValues({
-            venueName: '',
-            email: '',
-            password: '',
-          });
         })
+        batch.set(statsRef, {count: firebase.firestore.FieldValue.increment(1)}, {merge: true});
+        batch.commit().then(() => {
+            setRedirect(true);
+            setLoading(false);
+            setValues({
+              venueName: '',
+              email: '',
+              password: '',
+              dateJoined: date
+            });
+        });
+        // managersRef.doc(`${userCredential.user.uid}`).set({
+        //   venueName: values.venueName,
+        //   email: values.email,
+        //   uid: userCredential.user.uid
+        // }).then((docRef) => {
+        //   setRedirect(true);
+        //   setLoading(false);
+        //   setValues({
+        //     venueName: '',
+        //     email: '',
+        //     password: '',
+        //   });
+        // })
       }
     ).catch({
       function (error){
-        console.log(error.code)
-        console.log(error.message)
+        setLoading(false);
+        var errorCode = error.code;
+        var errorMessage = error.message;
+        setError(errorMessage)
+        setErrorVisible(true);
       }
     })
   }
@@ -54,7 +84,17 @@ export function ManagerSignUp() {
         <Header as='h2' color='teal' textAlign='center'>
           <Image src='/logo.png' /> Register as a Manager
         </Header>
-        <Form size='large' loading={loading} onSubmit={onSubmit}>
+        <Form size='large' loading={loading} onSubmit={onSubmit} error>
+          {errorVisible ?
+            (<Message
+              error
+              header='Signup Error'
+              content={error}
+              onDismiss={handleDismiss}
+             />)
+          :
+          ('')
+          }
           <Segment stacked>
             <Form.Group widths='equal'>
               <Form.Input icon='address card' iconPosition='left' placeholder='Venue Name' name='venueName' value={values.venueName} onChange={handleChange('venueName')} required/>

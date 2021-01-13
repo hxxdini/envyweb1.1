@@ -2,6 +2,9 @@ import PropTypes from 'prop-types';
 import _ from 'lodash'
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import './assets/cardStyles.css';
+import './assets/shareStyles.css';
 import {
   Button,
   Card,
@@ -19,10 +22,32 @@ import {
   Sidebar,
   Visibility,
   Tab,
-  Input,
+  Modal,
+  Form,
   Search,
+  Comment,
   Label,
+  Pagination,
+  Placeholder,
 } from 'semantic-ui-react'
+
+import {
+  FacebookShareButton,
+  TwitterShareButton,
+  WhatsappShareButton,
+  EmailShareButton,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsappIcon,
+  EmailIcon,
+} from  'react-share';
+
+import InfiniteScroll from "react-infinite-scroll-component";
+
+import Footer from './Footer';
+
+import { countryOptions } from './assets/countries';
+
 import firebase from './components/Firebase';
 
 // Heads up!
@@ -44,7 +69,7 @@ const HomepageHeading = ({ mobile }) => (
   <Container text>
     <Header
       as='h1'
-      content='Imagine-a-Company'
+      content='Looking for an Event ?'
       inverted
       style={{
         fontSize: mobile ? '2em' : '4em',
@@ -55,7 +80,7 @@ const HomepageHeading = ({ mobile }) => (
     />
     <Header
       as='h2'
-      content='Do whatever you want when you want to.'
+      content='Explore & make your desired events visible with the help of our platform'
       inverted
       style={{
         fontSize: mobile ? '1.5em' : '1.7em',
@@ -63,8 +88,8 @@ const HomepageHeading = ({ mobile }) => (
         marginTop: mobile ? '0.5em' : '1.5em',
       }}
     />
-    <Button primary size='huge'>
-      Get Started
+    <Button primary as={Link} to='/eventcreate' size='huge'>
+      Create Event
       <Icon name='right arrow' />
     </Button>
   </Container>
@@ -87,6 +112,11 @@ class DesktopContainer extends Component {
   render() {
     const { children, user } = this.props
     const { fixed } = this.state
+    const trigger = (
+      <span>
+        <Image avatar src={user ? user.profileImgUrl : 'https://react.semantic-ui.com/images/wireframe/image.png'} /> {user ? `${user.firstName} ${user.lastName}` : <Placeholder><Placeholder.Line/></Placeholder>}
+      </span>
+    );
 
     return (
       <Responsive getWidth={getWidth} minWidth={Responsive.onlyTablet.minWidth}>
@@ -104,7 +134,7 @@ class DesktopContainer extends Component {
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               // opacity: 0.6,
-              minHeight: 700,
+              minHeight: 500,
               Zindex: 0,
             padding: '1em 0em' }}
             vertical
@@ -112,7 +142,7 @@ class DesktopContainer extends Component {
 
             <Menu
               fixed={fixed ? 'top' : null}
-              inverted={!fixed}
+              inverted={true}
               pointing={!fixed}
               secondary={!fixed}
               size='large'
@@ -123,14 +153,15 @@ class DesktopContainer extends Component {
                 <Menu.Item as='a' active>
                   Home
                 </Menu.Item>
-                <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
-                <Menu.Item as='a'>Venues</Menu.Item>
-                <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
+                <Menu.Item as={Link} to='/eventcreate'>Create an Event</Menu.Item>
+                <Menu.Item as={Link} to='/venues'>Venues</Menu.Item>
+                <Menu.Item as={Link} to='/registervenue'>Register a Venue</Menu.Item>
                 <Menu.Item position='right'>
                   { user ?
-                    ([(<Dropdown item text="Profile" pointing>
+                    ([(<Dropdown trigger={trigger} icon="null" pointing='top left'>
                       <Dropdown.Menu>
-                        <Dropdown.Item>Dashboard</Dropdown.Item>
+                        <Dropdown.Item as={Link} to='/profile'><Icon name='user'/>Profile</Dropdown.Item>
+                        <Dropdown.Item as={Link} to='/notifications'><Icon name='feed'/>Notifications</Dropdown.Item>
                       </Dropdown.Menu>
                     </Dropdown>),
                       (<Button as='a' inverted={!fixed} onClick={this.handleSignOut} secondary icon labelPosition='left'>
@@ -138,10 +169,10 @@ class DesktopContainer extends Component {
                         Logout
                       </Button>)])
                   :
-                  [(<Button as='a' inverted={!fixed}>
+                  [(<Button as={Link} to='login' inverted={!fixed}>
                     Log in
                   </Button>),
-                    (<Button as='a' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
+                    (<Button as={Link} to='signup' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
                       Sign Up
                     </Button>)]
                   }
@@ -160,7 +191,7 @@ class DesktopContainer extends Component {
 
 DesktopContainer.propTypes = {
   children: PropTypes.node,
-  user: PropTypes.any,
+  user: PropTypes.array,
 }
 
 class MobileContainer extends Component {
@@ -193,18 +224,18 @@ class MobileContainer extends Component {
           <Menu.Item as='a' active>
             Home
           </Menu.Item>
-          <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
-          <Menu.Item as='a'>Venues</Menu.Item>
-          <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
+          <Menu.Item as={Link} to='/eventcreate'>Create an Event</Menu.Item>
+          <Menu.Item as={Link} to='/venues'>Venues</Menu.Item>
+          <Menu.Item as={Link} to='/registervenue'>Register a Venue</Menu.Item>
           {user ?
             (
-              [(<Menu.Item as='a'>Dashboard</Menu.Item>),
-              (<Menu.Item as='a'>Notifications</Menu.Item>),
+              [(<Menu.Item as={Link} to='/profile'>Profile</Menu.Item>),
+              (<Menu.Item as={Link} to='/notifications'>Notifications</Menu.Item>),
               (<Menu.Item as='a' onClick={this.handleSignOut}>Logout</Menu.Item>)]
             )
           :
-          ([(<Menu.Item as='a'>Log in</Menu.Item>),
-            (<Menu.Item as='a'>Sign Up</Menu.Item>)])
+          ([(<Menu.Item as={Link} to='/login'>Log in</Menu.Item>),
+            (<Menu.Item as={Link} to='/signup'>Sign Up</Menu.Item>)])
           }
           <Menu.Item as='a' onClick={this.handleSidebarHide}><Icon name='close'/></Menu.Item>
         </Sidebar>
@@ -240,12 +271,14 @@ class MobileContainer extends Component {
                   </Menu.Item>
                   <Menu.Item position='right'>
                     {user ?
-                      ""
+                      (<span>
+                        <Image avatar src={user ? user.profileImgUrl : 'https://react.semantic-ui.com/images/wireframe/image.png'} /> {user ? `${user.firstName} ${user.lastName}` : <Placeholder><Placeholder.Line/></Placeholder>}
+                      </span>)
                     :
-                    ([<Button as='a' inverted>
+                    ([<Button as={Link} to='/login' inverted>
                       Log in
                     </Button>],
-                      [<Button as='a' inverted style={{ marginLeft: '0.5em' }}>
+                      [<Button as={Link} to='/signup' inverted style={{ marginLeft: '0.5em' }}>
                         Sign Up
                       </Button>])
                     }
@@ -265,22 +298,10 @@ class MobileContainer extends Component {
 
 MobileContainer.propTypes = {
   children: PropTypes.node,
-  user: PropTypes.any,
+  user: PropTypes.array,
 }
 
-const ResponsiveContainer = ({ children }) => {
-  const [user, setUser] = React.useState(firebase.auth().currentUser);
-  React.useEffect(() => {
-    firebase.auth().onAuthStateChanged(function(user){
-      if (user) {
-        console.log(user);
-        setUser(user);
-      }
-      else {
-        setUser(null);
-      }
-  })
-}, []);
+const ResponsiveContainer = ({ children, user }) => {
   return(
   <div>
     <DesktopContainer user={user}>{children}</DesktopContainer>
@@ -291,210 +312,671 @@ const ResponsiveContainer = ({ children }) => {
 
 ResponsiveContainer.propTypes = {
   children: PropTypes.node,
+  user: PropTypes.any,
 }
 
-const panes = [
-  {
-    menuItem: 'All Events',
-    render: () => <Segment padded raised><Media/></Segment>,
-  },
-  {
-    menuItem: 'Party',
-    render: () => <Segment padded raised><CategoryMedia loading category="Party"/></Segment>,
-  },
-  {
-    menuItem: 'Tab 3',
-    render: () => <Segment padded raised>Tab 3 Content</Segment>,
-  },
-]
 
-export function Home(props) {
+
+export default function Home(props) {
 
   const [events, setEvents] = React.useState([]);
-  const [date, setDate] = React.useState(new Date());
+  const [eventsByCategory, setEventsByCategory] = React.useState({});
+  const [categories, setCategories] = React.useState([]);
+  const [date] = React.useState(new Date());
   const [searchLoader, setSearchLoader] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState('');
   const [searchResults, setResults] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [user, setUser] = React.useState(firebase.auth().currentUser);
+  const [country, setCountry] = React.useState();
+  const openAPI = 'https://api.opencagedata.com/geocode/v1/json?q=';
+  const openAPIKey = '&key=d1fa4a4fbb644417abc4d1995efff843';
+
+  const getUserLocation = () => {
+    navigator.geolocation.getCurrentPosition((position) => {
+      console.log(position);
+      var lat = position.coords.latitude;
+      var lng = position.coords.longitude;
+      var geoUrl = openAPI + `${lat}+${lng}` + openAPIKey + '&pretty=1' + '&no_annotations=1';
+      getStringLocation(geoUrl);
+    });
+  }
+
+  const getStringLocation = async (geoUrl) => {
+    var result = await axios(geoUrl);
+    console.log(result.data.results);
+    var location = result.data.results[0].components;
+    setCountry(location.country);
+    console.log(location.country);
+  }
+
+  const handleCountry = (e, {value}) => {
+    setCountry(value);
+  }
+
+  const [hasMore, setHasMore] = React.useState(true);
+  const [lastVisible, setLastVisible] = React.useState();
+
+  
+
+  const getEvents = async () => {
+    var eventsRef = await db.collection("Events");
+    // var startAt = currentPage * itemsPerPage - itemsPerPage;
+    if (country){
+      eventsRef.where("eventCountry", "==", country).where("formattedEndDate", ">=", date).orderBy("formattedEndDate").limit(3).get().then(querySnapshot => {
+          setLastVisible(querySnapshot.docs[querySnapshot.docs.length-1]);
+          let events = [];
+          querySnapshot.forEach(doc =>
+            events.push({ ...doc.data() })
+          )
+          setEvents(events);
+          groupEventsByCategory(events);
+          console.log(date);
+      });
+    }
+  }
+
+  const fetchMoreEvents = async () => {
+    var eventsRef = await db.collection("Events");
+    if (country) {
+      eventsRef.where("eventCountry", "==", country).where("formattedEndDate", ">=", date).orderBy("formattedEndDate").startAfter(lastVisible).limit(3).get().then(querySnapshot => {
+          if (querySnapshot.empty) {
+            setHasMore(false);
+          }
+          setLastVisible(querySnapshot.docs[querySnapshot.docs.length-1]);
+          // var lastItem = querySnapshot.docs[querySnapshot.docs.length-1];
+          let moreEvents = [];
+          querySnapshot.forEach(doc => 
+            moreEvents.push({ ...doc.data() })
+          );
+          var newEventArray = events.concat(moreEvents);
+          setEvents(newEventArray);
+          groupEventsByCategory(newEventArray);
+        }
+
+      )
+    }
+  }
+
+  React.useEffect(() => {
+    firebase.auth().onAuthStateChanged(function(user){
+      if (user) {
+        db.collection("Users").doc(user.uid).get().then(doc => {
+          if (doc.exists){
+            setUser(doc.data());
+          }
+          else {
+            setUser(null);
+          }
+        })
+      }
+      else {
+        setUser(null);
+      }
+  });
+  if (country === undefined) {
+    getUserLocation();
+  }
+  getEvents();
+  setTimeout(() => {
+    setLoading(false);
+  }, 3000);
+}, [country]);
+
+
+  const groupEventsByCategory = (events) => {
+    let eventsGroupedByCategory = {}
+    events.forEach(event => {
+      if (eventsGroupedByCategory[event.eventCategory] == undefined) {
+        eventsGroupedByCategory[event.eventCategory] = [];
+      }
+      eventsGroupedByCategory[event.eventCategory].push(event);
+    })
+    const categories = Object.keys(eventsGroupedByCategory);
+    console.log(categories);
+    setCategories(categories);
+    console.log(eventsGroupedByCategory);
+    setEventsByCategory(eventsGroupedByCategory);
+    return eventsGroupedByCategory;
+  }
+
+  const trimString = function (string, length) {
+      return string.length > length ?
+             string.substring(0, length) + '...' :
+             string;
+    };
+
+
+  const resultRenderer = ({ eventName, eventImgUrl, eventDetails, uid }) =>
+
+    <List.Item as={Link} to={`event/${uid}`}>
+      <Image avatar src={eventImgUrl}/>
+      <List.Content>
+        <List.Header as='a'>{eventName}</List.Header>
+        <List.Description>
+          {trimString(eventDetails.blocks[0].text, 60)}
+        </List.Description>
+      </List.Content>
+    </List.Item>
+
   const handleResultSelect = (e, {result}) => {
     setSearchValue(result.eventName);
+  }
+
+  function setInitialValues() {
+    // setSearchValue('');
+    setSearchLoader(false);
+    setResults([]);
   }
 
   const handleSearchChange = (e, {value}) => {
     setSearchLoader(true);
     setSearchValue(value);
     setTimeout(() => {
-      if (searchValue.length < 1) return (setSearchLoader(false));
+      if (searchValue.length < 0) return setInitialValues();
       const re = new RegExp(_.escapeRegExp(searchValue), 'i');
       const isMatch = (result) => re.test(result.eventName);
       setSearchLoader(false);
       setResults(_.filter(events, isMatch));
     }, 300);
   }
+    const categoryPanes = categories.map(category => {
+      return {
+        menuItem: category,
+        render: () =>
+        <InfiniteScroll
+            dataLength={events.length} //This is important field to render the next data
+            next={fetchMoreEvents}
+            hasMore={hasMore}
+            loader={<h4>Scroll down to load more...</h4>}
+            height={500}
+            endMessage={
+              <p style={{ textAlign: 'center' }}>
+                <b>These are all the available venues in the country</b>
+              </p>
+            }
+        >
+        <Segment padded raised>
+          <EventMedia events={eventsByCategory[category]} user={user} loading={loading}/>
+        </Segment>
+        </InfiniteScroll>
+      }
+    })
 
-  React.useEffect(() => {
-    db.collection("Events").get()
-    .then(querySnapshot => {
-      // const data = querySnapshot.docs.map(doc => doc.data());
-      let events = [];
-      querySnapshot.forEach(doc =>
-        events.push({ ...doc.data() })
-      )
-      console.log(events);
-      setEvents(events);
-      console.log(date);
-    });
-  }, []);
+    const panes = [
+      {
+        menuItem: 'All Events',
+        render: () =>
+        <InfiniteScroll
+            dataLength={events.length} //This is important field to render the next data
+            next={fetchMoreEvents}
+            hasMore={hasMore}
+            loader={<h4>Scroll down to load more...</h4>}
+            endMessage={
+              <p style={{ textAlign: 'center' }}>
+                <b>These are all the available venues in the country</b>
+              </p>
+            }
+        > 
+        <Segment id="scrollable-div" padded raised>
+          <EventMedia events={events} user={user} loading={loading}/>
+        </Segment>
+        </InfiniteScroll>
+        ,
+      },
+      ...categoryPanes
+    ]
 
   return (
-  <ResponsiveContainer>
+  <ResponsiveContainer user={user}>
     <Segment style={{ padding: '8em 0em' }} raised vertical>
-      <Menu secondary style={{ marginLeft: '10px' }}>
-        <Menu.Menu position='left'>
-          <Menu.Item>
-            {/* <Input size='large' icon='map marker' iconPosition='left' placeholder='Search for events...' style={{ left: '10px' }}/> */}
-          </Menu.Item>
-        </Menu.Menu>
-      </Menu>
-      <Grid container stackable columns='equal' verticalAlign='middle' centered>
-        <Grid.Column width={6}>
+      <Grid container stackable columns='equal' centered textAlign='center'>
+        <Grid.Row columns={12}>
           <Search
             fluid
+            placeholder='Search for nearby events'
+            size='large'
             loading={searchLoader}
             onResultSelect={handleResultSelect}
             onSearchChange={_.debounce(handleSearchChange, 500, {
-              leading: true,
+              trailing: true,
             })}
             results={searchResults}
+            resultRenderer={resultRenderer}
             value={searchValue}
+            className='search_bar'
             {...props}
           />
-        </Grid.Column>
-        <Tab menu={{ secondary: true, pointing: true }} panes={panes} />
+        </Grid.Row>
+        <Grid.Row columns={2}>
+          <Grid.Column>
+            {country ? (<Dropdown
+              inline
+              search
+              placeholder={country}
+              value={country}
+              onChange={handleCountry}
+              options={countryOptions}/>) :
+              (<Dropdown
+                inline
+                search
+                placeholder='Select country'
+                value={country}
+                onChange={handleCountry}
+                options={countryOptions}/>)}
+          </Grid.Column>
+          <Grid.Column>
+            <Modal
+              trigger={
+                <Button floated='right' secondary icon>
+                  <Icon name='sort amount down'/> Sort Events
+                </Button>
+              }
+              closeIcon
+            >
+              <Modal.Header>Sort Events</Modal.Header>
+              {/* <Modal.Content>
+                <Modal.Desription></Modal.Desription>
+              </Modal.Content> */}
+            </Modal>
+          </Grid.Column>
+        </Grid.Row>
+        {events.length > 0 ? (<Tab menu={{ secondary: true, pointing: true }} panes={panes}/>)
+        :
+        (
+          <Segment padded>
+            <Header icon>
+              <Icon name='calendar times outline'/>
+              There are no upcoming events in this country at the moment
+            </Header>
+          </Segment>
+        )
+        }
       </Grid>
     </Segment>
+    <Footer/>
   </ResponsiveContainer>
 );
 }
 
-function Media(props){
-  const [events, setEvents] = React.useState([]);
-  const [date, setDate] = React.useState(new Date());
-  const [active, setActive] = React.useState(false);
+EventMedia.propTypes = {
+  user: PropTypes.any.isRequired,
+  events: PropTypes.array.isRequired,
+}
 
-  const handleClick = () => {
-    setActive(!active);
-  }
+function EventMedia(props){
+  const {events, user} = props;
+  const [loading, setLoading] = React.useState(true);
+
+  var lengthString = 50;
+
+  let trimString = function (string, length) {
+      return string.length > length ?
+             string.substring(0, length) + '...' :
+             string;
+    };
 
   React.useEffect(() => {
-    db.collection("Events").get()
-    .then(querySnapshot => {
-      // const data = querySnapshot.docs.map(doc => doc.data());
-      let events = [];
-      querySnapshot.forEach(doc =>
-        events.push({ ...doc.data() })
-      )
-      console.log(events);
-      setEvents(events);
-      console.log(date);
-    });
+    setTimeout(() => {
+      setLoading(false);
+    }, 5000);
   }, []);
 
   return(
       <Card.Group centered items={events.count}>
         {events.map(event => (
-          <Card link>
-            <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
-            <Card.Content>
-              <Card.Header>{event.eventName}</Card.Header>
-              <Card.Meta>
-                <span className='date'>{event.startDate}</span>
-              </Card.Meta>
-              <Card.Description>
-                {event.eventDetails}
-              </Card.Description>
-            </Card.Content>
-            <Card.Content extra>
-              <Button as='div' labelPosition='right'>
-                <Button icon toggle active={active} onClick={handleClick}>
-                  <Icon name='heart' />
-                  Like
-                </Button>
-                <Label as='a' basic pointing='left'>
-                  0
-                </Label>
-              </Button>
-              <a>
-                <Icon name='share alternate'/>
-              </a>
-            </Card.Content>
-          </Card>
+          (<Modal
+            trigger={
+              <Card link>
+                {loading ?
+                  (
+                    <Placeholder className='event_card_image'>
+                      <Placeholder.Image rectangular className='event_card_image'/>
+                    </Placeholder> )
+                :
+                (<Image className='event_card_image' src={event.eventImgUrl} wrapped ui={false} size='small' />)
+                }
+                <Card.Content>
+                  {loading ?
+                    (<Placeholder>
+                      <Placeholder.Header>
+                        <Placeholder.Line length='very short' />
+                        <Placeholder.Line length='medium' />
+                      </Placeholder.Header>
+                    </Placeholder>)
+                  :
+                  (
+                    [(<Card.Header>{trimString(event.eventName, 30)}</Card.Header>),
+                    (<Card.Meta>
+                      <span className='date'>{event.startDate}</span>
+                    </Card.Meta>)]
+                  )
+                  }
+                  <Card.Description className='event_card_description'>
+                    {loading ?
+                      (<Placeholder>
+                        <Placeholder.Paragraph>
+                          <Placeholder.Line/>
+                          <Placeholder.Line/>
+                        </Placeholder.Paragraph>
+                      </Placeholder>)
+                    :
+                    (
+                      [(<p>{trimString(event.eventDetails.blocks[0].text, lengthString)}</p>),
+                      (<p>{trimString(`${event.eventStreet1}, ${event.eventCity}, ${event.eventCountry}`, lengthString)}</p>)]
+                    ) }
+                  </Card.Description>
+                </Card.Content>
+                <Card.Content extra>
+                  {loading ?
+                    (<Placeholder fluid>
+                      <Placeholder.Line/>
+                    </Placeholder>)
+                  :
+                  (<CardDetails event={event}/>)
+                  }
+                </Card.Content>
+              </Card>
+            }
+            closeIcon
+           >
+            <Modal.Header>{event.eventName}</Modal.Header>
+            <Modal.Content image scrolling>
+              <Image wrapped src={event.eventImgUrl} rounded className='modal_event_image'/>
+              <Modal.Description>
+                <Grid container stackable double>
+                  <Grid.Row columns={3}>
+                    <Grid.Column>
+                      <EventActions uid={event.uid} title={event.eventName} user={user}/>
+                    </Grid.Column>
+                    <Grid.Column>
+                      <Button primary as={Link} to={`/event/${event.uid}`}>
+                        Event Page
+                      </Button>
+                    </Grid.Column>
+                  </Grid.Row>
+                </Grid>
+                <Header>
+                  <Icon name='calendar alternate outline' color='grey'/>
+                  <Header.Content>Date & Time</Header.Content>
+                </Header>
+                <p>{event.startDate} @ {event.startTime} - {event.endDate} @ {event.endTime}</p>
+                <Divider/>
+                <Header>
+                  <Icon name='map pin' color='grey'/>
+                  <Header.Content>Event Address</Header.Content>
+                  <Header.Subheader>
+                  </Header.Subheader>
+                </Header>
+                <p>{event.eventVenue}, {event.eventStreet1}</p>
+                <p>{event.eventCity}, {event.eventProvince}</p>
+                <p>{event.eventCountry}</p>
+              </Modal.Description>
+            </Modal.Content>
+          </Modal>)
         ))}
       </Card.Group>
   );
 
 }
 
-function CategoryMedia(props){
-  const { loading = false, category } = props;
-  const [events, setEvents] = React.useState([]);
-  const [date, setDate] = React.useState(new Date());
-  const [active, setActive] = React.useState(false);
+EventActions.propTypes = {
+  uid: PropTypes.any.isRequired,
+  title: PropTypes.any.isRequired,
+  user: PropTypes.any.isRequired,
+}
 
-  const handleClick = () => {
+function EventActions(props) {
+  const {uid, title, user} = props;
+  const [active, setActive] = React.useState(false);
+  const [values, setValues] = React.useState({
+    comment: '',
+  });
+  const [date] = React.useState(new Date());
+  const [loader, setLoader] = React.useState(false);
+  const handleChange = name => event => {
+    setValues({ ...values, [name]: event.target.value });
+  };
+  const getLikeStatus = async () => {
+    if (user) {
+      const likeRef = await db.collection("Events").doc(uid).collection("eventLikeIDs").doc(user.uid);
+      likeRef.onSnapshot((doc) => {
+        if (doc.exists) {
+          var like = doc.data().likeState;
+          setActive(like);
+        }
+        else {
+          db.collection("Events").doc(uid).collection("eventLikeIDs").doc(user.uid).set({
+            likeState: false
+          })
+        }
+      });
+    }
+  }
+  React.useEffect(() => {
+    getLikeStatus();
+  }, []);
+  const handleLikeClick = () => {
     setActive(!active);
+    const counterRef = db.collection("Events").doc(uid).collection("eventLikes").doc(uid).collection("shards").doc('0');
+    const likeStateRef = db.collection("Events").doc(uid).collection("eventLikeIDs").doc(user.uid);
+    const batch = db.batch();
+    if (!active) {
+      console.log("Liked");
+      batch.set(counterRef, {count: firebase.firestore.FieldValue.increment(1)}, {merge: true});
+      batch.update(likeStateRef, {likeState: true});
+      batch.commit();
+      // incrementCounter(db, counterRef, 0);
+      console.log("Liked");
+    }
+    else {
+      console.log("Disliked");
+      batch.set(counterRef, {count: firebase.firestore.FieldValue.increment(-1)}, {merge: true});
+      batch.update(likeStateRef, {likeState: false});
+      batch.commit();
+      // decrementCounter(db, counterRef, 0);
+      console.log("Disliked");
+    }
+  }
+
+  const postComment = (e) => {
+    if (user) {
+      e.preventDefault();
+      setLoader(true);
+      const commentRef = db.collection("Events").doc(uid).collection("comments").doc();
+      const commentStatRef = db.collection("Events").doc(uid).collection("statistics").doc("comments");
+      const batch = db.batch();
+      batch.set(commentRef, {
+        message: values.comment,
+        profileImgUrl: user.profileImgUrl,
+        senderId: user.uid,
+        username: user.username,
+        timestamp: date,
+      });
+      batch.set(commentStatRef, {count: firebase.firestore.FieldValue.increment(1)}, {merge: true});
+      batch.commit().then(() => {
+        setLoader(false);
+        setValues({
+          comment: '',
+        });
+      });
+    }
+  }
+
+
+
+  const shareURL = window.location.origin + '/event/' + uid;
+  return (
+    [<Button.Group icon>
+      <Button toggle active={active} onClick={handleLikeClick} value={uid}>
+        <Icon name='heart'/>
+      </Button>
+      (<Modal
+        trigger={
+          <Button>
+            <Icon name='share alternate'/>
+          </Button>
+        }
+        size='mini'
+        closeIcon
+       >
+        <Modal.Header>Share Event</Modal.Header>
+        <Modal.Content image scrolling>
+          <Modal.Description>
+            <div className='Share__container'>
+              <div className='Share__some-network'>
+                <FacebookShareButton url={shareURL} title={title} className='Share__some-network__share-button'>
+                  <FacebookIcon
+                    size={32}
+                  round />
+                </FacebookShareButton>
+              </div>
+              <div className='Share__some-network'>
+                <TwitterShareButton url={shareURL} title={title} className='Share__some-network__share-button'>
+                  <TwitterIcon
+                    size={32}
+                  round/>
+                </TwitterShareButton>
+              </div>
+              <div className='Share__some-network'>
+                <WhatsappShareButton url={shareURL} title={title} className='Share__some-network__share-button'>
+                  <WhatsappIcon
+                    size={32}
+                  round/>
+                </WhatsappShareButton>
+              </div>
+              <div className='Share__some-network'>
+                <EmailShareButton url={shareURL} title={title} className='Share__some-network__share-button'>
+                  <EmailIcon
+                    size={32}
+                  round/>
+                </EmailShareButton>
+              </div>
+            </div>
+          </Modal.Description>
+        </Modal.Content>
+      </Modal>),
+      (<Modal
+        trigger={
+          <Button>
+            <Icon name='chat'/>
+          </Button>
+        }
+        closeIcon
+       >
+        <Modal.Header>Comments</Modal.Header>
+        <Modal.Content image scrolling>
+          <Modal.Description>
+            <Comment.Group>
+              <Chats uid={uid} user={user}/>
+              <Form reply loading={loader} onSubmit={postComment}>
+                <Form.TextArea placeholder='Add a comment or reply' value={values.comment} onChange={handleChange('comment')} name='comment' required/>
+                <Button content='Add Reply' labelPosition='left' icon='edit' primary type='submit'/>
+              </Form>
+              <Divider hidden/>
+            </Comment.Group>
+          </Modal.Description>
+        </Modal.Content>
+      </Modal>)
+    </Button.Group>]
+  );
+}
+
+Chats.propTypes = {
+  uid: PropTypes.any.isRequired,
+  user: PropTypes.any,
+}
+
+function Chats(props) {
+  const {uid} = props
+  const [comments, setComments] = React.useState([]);
+  React.useEffect(() => {
+    db.collection('Events').doc(uid).collection('comments').onSnapshot(querySnapshot => {
+      let messages = [];
+      querySnapshot.forEach(doc =>
+        messages.push({ ...doc.data() })
+      )
+      console.log(messages);
+      setComments(messages);
+    })
+  }, [])
+  return (
+      comments.map(comment => (
+          <Comment>
+            <Comment.Avatar src={comment.profileImgUrl} />
+            <Comment.Content>
+              <Comment.Author as='a'>{comment.username}</Comment.Author>
+              <Comment.Metadata>
+                <div>{new Date(comment.timestamp.toDate()).toDateString()}</div>
+              </Comment.Metadata>
+              <Comment.Text>{comment.message}</Comment.Text>
+            </Comment.Content>
+          </Comment>
+        ))
+  );
+}
+
+CardDetails.propTypes = {
+  event: PropTypes.any.isRequired,
+}
+
+function CardDetails(props){
+  const {event} = props
+  const likeRef = db.collection("Events").doc(event.uid).collection("eventLikes").doc(event.uid).collection("shards").doc('0');
+  const commRef = db.collection("Events").doc(event.uid).collection("statistics").doc("comments");
+  const [eventLikes, setEventLikes] = React.useState(0);
+  const [comments, setComments] = React.useState(0);
+  const getLikesCount = () => {
+    likeRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        var likeCount = doc.data().count
+        setEventLikes(likeCount)
+      }
+      else {
+        createCounter(db.collection("Events").doc(event.uid).collection("eventLikes").doc(event.uid), 0)
+      }
+    });
+  }
+
+  const getCommentCount = () => {
+    commRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        let count = doc.data().count;
+        setComments(count);
+      }
+    })
+  }
+
+  function createCounter(ref, num_shards) {
+    var batch = db.batch();
+
+    // Initialize the counter document
+    batch.set(ref, { num_shards: num_shards });
+    console.log('Breakpoint 1');
+
+    // Initialize each shard with count=0
+    for (let i = 0; i <= num_shards; i++) {
+      console.log('Breakpoint 2');
+        let shardRef = ref.collection('shards').doc(i.toString());
+        batch.set(shardRef, { count: 0 });
+    }
+
+    // Commit the write batch
+    return batch.commit();
   }
 
   React.useEffect(() => {
-    db.collection("Events").where("eventCategory", "==", category).get()
-    .then(querySnapshot => {
-      // const data = querySnapshot.docs.map(doc => doc.data());
-      let events = [];
-      querySnapshot.forEach(doc =>
-        events.push({ ...doc.data() })
-      )
-      console.log(events);
-      setEvents(events);
-      console.log(date);
-    });
+    getLikesCount();
+    getCommentCount();
   }, []);
-
-  return(
-
-      <Card.Group centered items={events.count}>
-        {events.map(event => (
-          <Card link>
-            <Image src={event.eventImgUrl} wrapped ui={false} size='small' />
-            <Card.Content>
-              <Card.Header>{event.eventName}</Card.Header>
-              <Card.Meta>
-                <span className='date'>{event.startDate}</span>
-              </Card.Meta>
-              <Card.Description>
-                {event.eventDetails}
-              </Card.Description>
-            </Card.Content>
-            <Card.Content extra>
-              <Button as='div' labelPosition='right'>
-                <Button icon toggle active={active} onClick={handleClick}>
-                  <Icon name='heart' />
-                  Like
-                </Button>
-                <Label as='a' basic pointing='left'>
-                  0
-                </Label>
-              </Button>
-              <a>
-                <Icon name='share alternate'/>
-              </a>
-            </Card.Content>
-          </Card>
-        ))}
-      </Card.Group>
-  );
-
+  return([
+    (<Label>
+      <Icon name='heart' color='red'/>
+      {eventLikes} Likes
+    </Label>),
+    (<Label>
+      <Icon name='comments' color='blue'/>
+      {comments} Comments
+    </Label>)
+  ]);
 }
-
-CategoryMedia.propTypes = {
-  loading: PropTypes.bool,
-  category: PropTypes.any.isRequired,
-};

@@ -34,8 +34,10 @@ import {
   DateInput,
   TimeInput,
 } from 'semantic-ui-calendar-react';
+import Footer from './Footer';
 import firebase from './components/Firebase';
 import { VenueDetails } from './VenueDetails';
+import './assets/cardStyles.css';
 
 const getWidth = () => {
   const isSSR = typeof window === 'undefined'
@@ -89,7 +91,7 @@ class DesktopContainer extends Component {
 
              <Menu
                fixed={fixed ? 'top' : null}
-               inverted={!fixed}
+               inverted={true}
                pointing={!fixed}
                secondary={!fixed}
                size='large'
@@ -100,27 +102,20 @@ class DesktopContainer extends Component {
                  <Menu.Item as={Link} to='/'>
                    Home
                  </Menu.Item>
-                 <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
-                 <Menu.Item as='a'>Venues</Menu.Item>
-                 <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
+                 <Menu.Item as={Link} to='/eventcreate'>Create an Event</Menu.Item>
+                 <Menu.Item as={Link} to='/venues'>Venues</Menu.Item>
+                 <Menu.Item as={Link} to='/registervenue'>Register a Venue</Menu.Item>
                  <Menu.Item position='right'>
                    { user ?
-                     ([(<Dropdown item text="Profile" pointing>
-                       <Dropdown.Menu>
-                         <Dropdown.Item>Dashboard</Dropdown.Item>
-                       </Dropdown.Menu>
-                     </Dropdown>),
-                       (<Button as='a' inverted={!fixed} onClick={this.handleSignOut} secondary icon labelPosition='left'>
-                         <Icon name='power off'/>
-                         Logout
-                       </Button>)])
+                     ('')
                    :
-                   [(<Button as='a' inverted={!fixed}>
-                     Log in
-                   </Button>),
-                     (<Button as='a' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
-                       Sign Up
-                     </Button>)]
+                   ('')
+                     // [(<Button as='a' inverted={!fixed}>
+                     //   Log in
+                     // </Button>),
+                     //   (<Button as='a' inverted={!fixed} primary={fixed} style={{ marginLeft: '0.5em' }}>
+                     //     Sign Up
+                     //   </Button>)]
                    }
                  </Menu.Item>
                </Container>
@@ -156,15 +151,8 @@ class MobileContainer extends Component {
   }
 
   render() {
-    const currUser = firebase.auth().onAuthStateChanged(function(user){
-      if (user) {
-        console.log(user);
-        return user;
-      }
-  });
-    const { children } = this.props
+    const { children, user } = this.props
     const { sidebarOpened } = this.state
-    const user = currUser;
 
     return (
       <Responsive
@@ -185,18 +173,14 @@ class MobileContainer extends Component {
           <Menu.Item as='a' active>
             Home
           </Menu.Item>
-          <Menu.Item as={Link} to='eventcreate'>Create an Event</Menu.Item>
-          <Menu.Item as='a'>Venues</Menu.Item>
-          <Menu.Item as={Link} to='registervenue'>Register a Venue</Menu.Item>
+          <Menu.Item as={Link} to='/eventcreate'>Create an Event</Menu.Item>
+          <Menu.Item as={Link} to='/venues'>Venues</Menu.Item>
+          <Menu.Item as={Link} to='/registervenue'>Register a Venue</Menu.Item>
           {user ?
-            (
-              [(<Menu.Item as='a'>Dashboard</Menu.Item>),
-              (<Menu.Item as='a'>Notifications</Menu.Item>),
-              (<Menu.Item as='a' onClick={this.handleSignOut}>Logout</Menu.Item>)]
-            )
+            ('')
           :
-          ([(<Menu.Item as='a'>Log in</Menu.Item>),
-            (<Menu.Item as='a'>Sign Up</Menu.Item>)])}
+          ('')
+          }
           <Menu.Item as='a' onClick={this.handleSidebarHide}><Icon name='close'/></Menu.Item>
         </Sidebar>
 
@@ -233,12 +217,7 @@ class MobileContainer extends Component {
                     {user ?
                       ""
                     :
-                    ([<Button as='a' inverted>
-                      Log in
-                    </Button>],
-                      [<Button as='a' inverted style={{ marginLeft: '0.5em' }}>
-                        Sign Up
-                      </Button>])}
+                    ('')}
                   </Menu.Item>
                 </Menu>
               </Container>
@@ -253,12 +232,13 @@ class MobileContainer extends Component {
 
 MobileContainer.propTypes = {
   children: PropTypes.node,
+  user: PropTypes.any,
 }
 
 const ResponsiveContainer = ({ children, user }) => (
   <div>
     <DesktopContainer user={user}>{children}</DesktopContainer>
-    <MobileContainer>{children}</MobileContainer>
+    <MobileContainer user={user}>{children}</MobileContainer>
   </div>
 )
 
@@ -267,29 +247,33 @@ ResponsiveContainer.propTypes = {
   user: PropTypes.any,
 }
 
-export function ManagerDashboard() {
-  const [manager, setManager] = React.useState([]);
+export default function ManagerDashboard() {
+  const [manager, setManager] = React.useState(firebase.auth().currentUser);
   const [venue, setVenue] = React.useState([]);
-  const [active, setActive] = React.useState(false);
+  const [active, setActive] = React.useState(true);
   const [redirect, setRedirect] = React.useState(false);
+
+  const getVenue = async (user) => {
+    if (user.venueUID) {
+      const venueRef = db.collection("Venues").doc(user.venueUID);
+      venueRef.get().then((doc) => {
+        setVenue(doc.data());
+      })
+    }
+  }
+
   React.useEffect(() => {
-    setActive(true);
     firebase.auth().onAuthStateChanged((user) => {
       if (user){
         db.collection("Managers").doc(user.uid).get().then(doc => {
           if (doc.exists){
-            db.collection("Venues").where("managerUID", "==", user.uid).get().then(querySnapshot => {
-              let venue = [];
-              querySnapshot.forEach(doc =>
-                venue.push({ ...doc.data() })
-              );
-              setVenue(venue);
-              console.log(venue);
-            })
+            var usr = doc.data();
+            getVenue(usr);
             setManager(doc.data());
             setActive(false);
           }
           else {
+            setRedirect(true);
             setManager(null);
             setActive(false);
           }
@@ -305,12 +289,19 @@ export function ManagerDashboard() {
 
   const panes = [
     { menuItem: { key: 'details', icon: 'building', content: 'Details' }, render: () => <Segment raised><VenueDetails venue={venue}/></Segment> },
-    { menuItem: { key: 'menu', icon: 'clipboard', content: 'Menu' }, render: () => <Segment raised>{venue.map(ven => (<Menus venue={ven}/>))}</Segment> },
-    { menuItem: { key: 'photos', icon: 'image', content: 'Photos' }, render: () => <Segment raised>{venue.map(ven => (<Photos venue={ven}/>))}</Segment> },
+    { menuItem: { key: 'menu', icon: 'clipboard', content: 'Menu' }, render: () => <Segment raised><Menus venue={venue}/></Segment> },
+    { menuItem: { key: 'photos', icon: 'image', content: 'Photos' }, render: () => <Segment raised><Photos venue={venue}/></Segment> },
+  ]
+
+  const mobilePanes = [
+    { menuItem: { key: 'details', icon: 'building'}, render: () => <Segment raised><VenueDetails venue={venue}/></Segment> },
+    { menuItem: { key: 'menu', icon: 'clipboard'}, render: () => <Segment raised><Menus venue={venue}/></Segment> },
+    { menuItem: { key: 'photos', icon: 'image'}, render: () => <Segment raised><Photos venue={venue}/></Segment> },
   ]
 
   return(
     <ResponsiveContainer user={manager}>
+      {redirect ? (<Redirect to='/manager_login'/>) : ""}
       <Dimmer active={active} page>
         <Loader size='large'>Loading</Loader>
       </Dimmer>
@@ -320,27 +311,26 @@ export function ManagerDashboard() {
           <Header.Content>Manager Dashboard</Header.Content>
         </Header>
         <Segment padded raised size='small'>
-          <Grid centered doubling columns={6} divided='vertically'>
-            <Grid.Column textAlign='center'>
-              {venue.map(ven=>(
-                [
-                (<Image src={ven.venueImgUrl ? ven.venueImgUrl : 'https://react.semantic-ui.com/images/wireframe/image.png'} size='small' circular/>),
-                (<Header>
-                  <Header.Content>{manager.venueName}</Header.Content>
-                  <Header.Subheader>{ven.venueCategory}</Header.Subheader>
-                </Header>)
-                ]
-              ))}
-              {/* <Image src={venue.venueImgUrl ? venue.venueImgUrl : 'https://react.semantic-ui.com/images/wireframe/image.png'} size='small' circular/>
+          <Grid centered stackable divided='vertically'>
+            <Grid.Row columns={6}>
+              <Grid.Column textAlign='center'>
+                <Image src={venue.venueImgUrl ? venue.venueImgUrl : 'https://react.semantic-ui.com/images/wireframe/image.png'} size='large' circular/>
                 <Header>
-                <Header.Content>{manager.venueName}</Header.Content>
-                <Header.Subheader>Venue Category</Header.Subheader>
-              </Header> */}
-            </Grid.Column>
+                  <Header.Content>{manager ? manager.venueName : ""}</Header.Content>
+                  <Header.Subheader>{venue.venueCategory ? venue.venueCategory : "" }</Header.Subheader>
+                </Header>
+              </Grid.Column>
+            </Grid.Row>
           </Grid>
         </Segment>
-        <Tab menu={{ fluid: true, vertical: true, pointing: true }} panes={panes}/>
+        <Responsive {...Responsive.onlyComputer}>
+          <Tab menu={{ fluid: true, vertical: true, pointing: true }} panes={panes}/>
+        </Responsive>
+        <Responsive maxWidth={Responsive.onlyTablet.maxWidth}>
+          <Tab menu={{ fluid: true, pointing: true, icon: true }} panes={mobilePanes}/>
+        </Responsive>
       </Container>
+      <Footer/>
     </ResponsiveContainer>
   );
 }
@@ -352,6 +342,7 @@ Menus.propTypes = {
 function Menus(props) {
   const {venue} = props
   const docRef = firebase.firestore().collection("Venues").doc(venue.uid);
+  const batch = db.batch();
   const [menus, setMenus] = React.useState([]);
   const fileInputRef = React.createRef();
   const [menuImgs, setMenuImgs] = React.useState([]);
@@ -367,9 +358,15 @@ function Menus(props) {
       }
     })
   }, []);
+
   const handleMenuUpload = e => {
     console.log(e.target.files);
     setMenuImgs(e.target.files);
+  }
+
+  const deleteMenuClick = (e) => {
+    var menu = e.target.value;
+    console.log(menu);
   }
 
   const uploadMenus = e => {
@@ -388,10 +385,15 @@ function Menus(props) {
           },
           function() {
             uploadMenus.snapshot.ref.getDownloadURL().then(function(url) {
-              docRef.collection("Menus").doc(file.name).set({
-                'menuUrl': url,
-                'menuName': file.name
-              });
+              // docRef.collection("Menus").doc(file.name).set({
+              //   'menuUrl': url,
+              //   'menuName': file.name
+              // });
+              const fileRef = docRef.collection("Menus").doc(file.name);
+              const statRef = docRef.collection("statistics").doc("Menus");
+              batch.set(fileRef, {menuUrl: url, menuName: file.name});
+              batch.set(statRef, {count: firebase.firestore.FieldValue.increment(1)}, {merge: true});
+              batch.commit();
             });
           }
         );
@@ -427,23 +429,18 @@ function Menus(props) {
         <Card.Group centered items={menus.count}>
           {menus.map(menu => (
             <Modal
+              basic
               trigger={
-                <Card link>
-                  <Image src={menu.menuUrl} wrapped ui={false} size='small'/>
-                  <Card.Content>
-                    <Card.Header>{menu.menuName}</Card.Header>
-                  </Card.Content>
-                </Card>
+                <Card link raised image={menu.menuUrl} className='dashboard_photo_card_image'/>
               }
-              size='fullscreen'
               closeIcon
             >
               <Modal.Header>{menu.menuName}</Modal.Header>
               <Modal.Content image scrolling>
-                <Image src={menu.menuUrl} wrapped size='massive' centered style={{ paddingBottom: 5 }}/>
+                <Image src={menu.menuUrl} wrapped className='modal_photo_card_image' centered style={{ paddingBottom: 5 }}/>
               </Modal.Content>
               <Modal.Actions>
-                <Button basic color='red'>
+                <Button basic color='red' value={menu.menuName} onClick={deleteMenuClick}>
                   <Icon name='delete'/>Delete
                 </Button>
               </Modal.Actions>
@@ -465,6 +462,7 @@ Photos.propTypes = {
 function Photos(props) {
   const {venue} = props;
   const docRef = firebase.firestore().collection("Venues").doc(venue.uid);
+  const batch = db.batch();
   const [photos, setPhotos] = React.useState([]);
   const fileInputRef = React.createRef();
   const [photoImgs, setPhotoImgs] = React.useState([]);
@@ -498,10 +496,15 @@ function Photos(props) {
         },
         function (){
           uploadPhoto.snapshot.ref.getDownloadURL().then(function(url){
-            docRef.collection("Photos").doc(file.name).set({
-              photoUrl: url,
-              photoName: file.name
-            });
+            // docRef.collection("Photos").doc(file.name).set({
+            //   photoUrl: url,
+            //   photoName: file.name
+            // });
+            const fileRef = docRef.collection("Photos").doc(file.name);
+            const statRef = docRef.collection("statistics").doc("Photos");
+            batch.set(fileRef, {photoUrl: url, photoName: file.name});
+            batch.set(statRef, {count: firebase.firestore.FieldValue.increment(1)}, {merge: true});
+            batch.commit();
           });
         }
       );
@@ -538,17 +541,19 @@ function Photos(props) {
           {photos.map(photo => (
             <Modal
               trigger={
-                <Card link>
-                  <Image src={photo.photoUrl} wrapped ui={false} size='small'/>
-                </Card>
+                <Card link raised image={photo.photoUrl} className='dashboard_photo_card_image'/>
               }
               basic
-              size='large'
               closeIcon
             >
               <Modal.Content image>
-                <Image src={photo.photoUrl} size='big' centered size={{ paddingBottom: 5 }}/>
+                <Image src={photo.photoUrl} wrapped={true} className='modal_photo_card_image' centered size={{ paddingBottom: 5 }}/>
               </Modal.Content>
+              <Modal.Actions>
+                <Button basic color='red'>
+                  <Icon name='delete'/>Delete
+                </Button>
+              </Modal.Actions>
             </Modal>
           ))}
         </Card.Group>
