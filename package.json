@@ -3,16 +3,45 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^1.2.30",
+    "@fortawesome/free-solid-svg-icons": "^5.14.0",
+    "@fortawesome/react-fontawesome": "^0.1.11",
     "@stardust-ui/react": "^0.39.0",
-    "firebase": "^7.0.0",
-    "react": "^16.10.0",
-    "react-dom": "^16.10.0",
-    "react-notifications": "^1.4.3",
-    "react-router-dom": "^5.1.1",
-    "react-scripts": "3.1.2",
+    "axios": "^0.19.2",
+    "babel-polyfill": "^6.26.0",
+    "body-parser": "^1.19.0",
+    "cookie-parser": "^1.4.5",
+    "draft-js": "^0.11.6",
+    "draft-js-custom-styles": "^2.1.1",
+    "express": "^4.17.1",
+    "firebase": "^7.17.1",
+    "firebase-admin": "^8.13.0",
+    "firebase-functions": "^3.8.0",
+    "google-map-react": "^1.1.7",
+    "http-proxy-middleware": "^1.0.5",
+    "mjml": "^4.6.3",
+    "mjml-react": "^1.0.57",
+    "moment": "^2.27.0",
+    "node-geocoder": "^3.27.0",
+    "nodemailer": "^6.4.11",
+    "nodemailer-mailgun-transport": "^2.0.0",
+    "opencage-api-client": "^0.5.1",
+    "qrcode": "^1.4.4",
+    "react": "^16.13.1",
+    "react-async-script-loader": "^0.3.0",
+    "react-dom": "^16.13.1",
+    "react-geocode": "^0.2.1",
+    "react-helmet": "^6.1.0",
+    "react-html-email": "^3.0.0",
+    "react-infinite-scroll-component": "^5.1.0",
+    "react-map-gl": "^5.2.7",
+    "react-notifications": "^1.6.0",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "^3.4.1",
+    "react-share": "^3.0.1",
     "semantic-ui-calendar-react": "^0.15.3",
-    "semantic-ui-react": "^0.88.1",
-    "styled-components": "^4.4.0"
+    "semantic-ui-react": "^0.88.2",
+    "styled-components": "^4.4.1"
   },
   "scripts": {
     "start": "craco start",
@@ -20,6 +49,7 @@
     "test": "craco test",
     "eject": "craco eject"
   },
+  "proxy": "http://localhost:5000",
   "eslintConfig": {
     "extends": "react-app"
   },
@@ -36,8 +66,14 @@
     ]
   },
   "devDependencies": {
-    "@craco/craco": "^5.5.0",
-    "@semantic-ui-react/craco-less": "^1.1.0",
+    "@babel/core": "^7.10.5",
+    "@babel/plugin-syntax-jsx": "^7.10.4",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/register": "^7.10.5",
+    "@craco/craco": "^5.6.4",
+    "@semantic-ui-react/craco-less": "^1.2.1",
+    "concurrently": "^5.2.0",
+    "nodemon": "^2.0.4",
     "semantic-ui-less": "^2.4.1"
   }
 }
