@@ -1,0 +1,36 @@
+.page {
+  position: absolute;
+  left: 15px;
+  right: 15px;
+}
+
+.page-appear {
+  opacity: 0.01;
+}
+
+.page-appear.page-appear-active {
+  opacity: 1;
+  transition: opacity 3.5s ease-in;
+}
+
+.page-enter {
+  opacity: 0;
+  transform: scale(1.1);
+}
+
+.page-enter.page-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 3000ms, transform 300ms;
+}
+
+.page-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 300ms, transform 300ms;
+}

@@ -1,0 +1,130 @@
+.search_bar {
+  width: 500px;
+  .input{
+    width: 100%;
+  }
+}
+
+.search_bar_result_image {
+  width: 20% !important;
+  height: 50px !important;
+}
+
+.search_bar_result_image img {
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.search_user_bar {
+  width: 500px;
+  .input{
+    width: 100%;
+  }
+}
+
+.search_user_bar_result_image {
+  width: 15% !important;
+  height: 50px !important;
+  border-radius: 45px !important;
+}
+
+.search_user_bar_result_image img {
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.event_card_image {
+  width: 100% !important;
+  height: 170px !important;
+}
+
+.event_card_image img {
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.event_card_description {
+  min-height: 70px;
+  max-height: 70px;
+  overflow: hidden;
+}
+
+.modal_event_image {
+  width: 600px !important;
+  height: 300px !important;
+}
+
+.modal_event_image img {
+  width: 100% !important;
+  height: inherit !important;
+  object-fit: cover;
+}
+
+.modal_venue_image {
+  width: 600px !important;
+  height: 300px !important;
+}
+
+.modal_venue_image img {
+  width: 100% !important;
+  height: inherit !important;
+  object-fit: cover;
+}
+
+.photo_card_image {
+  width: 100px !important;
+  height: 100px !important;
+  object-fit: cover;
+}
+
+.photo_card_image img {
+  width: 100px !important;
+  height: 100px !important;
+  object-fit: cover;
+}
+
+.dashboard_photo_card_image {
+  width: 150px !important;
+  height: 150px !important;
+  object-fit: cover;
+}
+
+.dashboard_photo_card_image img {
+  width: 150px !important;
+  height: 150px !important;
+  object-fit: cover;
+}
+
+.modal_photo_card_image {
+  width: 350px !important;
+  height: 350px !important;
+  object-fit: cover;
+}
+
+.modal_photo_card_image img {
+  width: 350px !important;
+  height: 350px !important;
+  object-fit: cover;
+}
+
+.page_image {
+  height: 320px !important;
+  object-fit: cover;
+}
+
+.page_image img {
+  height: 320px !important;
+  object-fit: cover;
+}
+
+.page_photo_card_image {
+  width: 200px !important;
+  height: 200px !important;
+  object-fit: cover;
+}
+
+.page_photo_card_image img {
+  width: 200px !important;
+  height: 200px !important;
+  object-fit: cover;
+}
